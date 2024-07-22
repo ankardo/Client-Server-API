@@ -41,8 +41,6 @@ func connectDB() (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to database: %v", err)
 	}
-	db.SetMaxIdleConns(0)   // this is the root problem! set it to 0 to remove all idle connections
-	db.SetMaxOpenConns(500) // or whatever is appropriate for your setup.
 	return db, nil
 }
 
@@ -55,8 +53,7 @@ func getDollarQuotation() (*Quote, error) {
 		return nil, fmt.Errorf("error creating request: %v", err)
 	}
 
-	client := &http.Client{Timeout: timeoutAPI}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error sending request: %v", err)
 	}
@@ -130,7 +127,7 @@ func insertQuote(ctx context.Context, db *sql.DB, quote *Quote) error {
 	if err != nil {
 		return fmt.Errorf("error inserting quote into database: %v", err)
 	}
-	fmt.Printf("Quote saved successfully")
+	fmt.Printf("Quote saved successfully\n")
 	return nil
 }
 
