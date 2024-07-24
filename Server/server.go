@@ -10,11 +10,10 @@ import (
 	"strconv"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/glebarez/go-sqlite"
 )
 
 const (
-	DBPath     = "root:root@tcp(localhost:3306)/dollarQuotation"
 	requestURL = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
 	timeoutAPI = 200 * time.Millisecond
 	timeoutDB  = 10 * time.Millisecond
@@ -37,11 +36,28 @@ func main() {
 }
 
 func connectDB() (*sql.DB, error) {
-	db, err := sql.Open("mysql", DBPath)
+	db, err := sql.Open("sqlite", "../dollarQuotation.db")
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to database: %v", err)
 	}
 	return db, nil
+}
+
+func ensureQuoteExists(db *sql.DB) error {
+	createTableSQL := `
+    CREATE TABLE IF NOT EXISTS quotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bid DECIMAL(10, 4) NOT NULL,
+        timestamp BIGINT NOT NULL,
+        create_date DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+    );`
+
+	_, err := db.Exec(createTableSQL)
+	if err != nil {
+		return fmt.Errorf("error creating quotes table: %v", err)
+	}
+
+	return nil
 }
 
 func getDollarQuotation() (*Quote, error) {
@@ -152,6 +168,15 @@ func getDollarQuotationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer db.Close()
+
+	if err = ensureQuoteExists(db); err != nil {
+		http.Error(
+			w,
+			fmt.Sprintf("Failed to create quotes table: %v", err),
+			http.StatusInternalServerError,
+		)
+		return
+	}
 
 	if err = saveIfTimestampChanged(db, quote); err != nil {
 		http.Error(

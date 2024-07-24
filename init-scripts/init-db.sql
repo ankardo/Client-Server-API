@@ -1,8 +1,0 @@
-USE dollarQuotation;
-
-CREATE TABLE IF NOT EXISTS quotes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    bid DECIMAL(10, 4) NOT NULL,
-    timestamp BIGINT NOT NULL,
-    create_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
